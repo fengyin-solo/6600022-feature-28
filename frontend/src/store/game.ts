@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { BoardState, Move, GameRecord, AIConfig, GameStatus } from '../types';
+import type { BoardState, Move, GameRecord, DeletedRecord, AIConfig, GameStatus } from '../types';
 
 const BOARD_SIZE = 15;
 const EMPTY = 0;
@@ -198,6 +198,7 @@ export const useGameStore = defineStore('game', () => {
   const status = ref<GameStatus>('idle');
   const winner = ref<number | null>(null);
   const gameRecords = ref<GameRecord[]>([]);
+  const deletedRecords = ref<DeletedRecord[]>([]);
   const aiConfig = ref<AIConfig>({ depth: 3, enabled: true, playerColor: WHITE });
   const isAiThinking = ref(false);
 
@@ -355,12 +356,42 @@ export const useGameStore = defineStore('game', () => {
     return checkWinAt(board.value, row, col, board.value[row][col]);
   }
 
+  function softDeleteRecord(id: string) {
+    const index = gameRecords.value.findIndex(r => r.id === id);
+    if (index === -1) return;
+    const [record] = gameRecords.value.splice(index, 1);
+    const deleted: DeletedRecord = {
+      ...record,
+      deletedAt: new Date().toLocaleString('zh-CN'),
+    };
+    deletedRecords.value.unshift(deleted);
+  }
+
+  function restoreRecord(id: string) {
+    const index = deletedRecords.value.findIndex(r => r.id === id);
+    if (index === -1) return;
+    const [record] = deletedRecords.value.splice(index, 1);
+    const { deletedAt, ...restored } = record;
+    gameRecords.value.unshift(restored);
+  }
+
+  function permanentDeleteRecord(id: string) {
+    const index = deletedRecords.value.findIndex(r => r.id === id);
+    if (index === -1) return;
+    deletedRecords.value.splice(index, 1);
+  }
+
+  function clearDeletedRecords() {
+    deletedRecords.value = [];
+  }
+
   return {
-    board, currentPlayer, moves, status, winner, gameRecords, aiConfig, isAiThinking,
+    board, currentPlayer, moves, status, winner, gameRecords, deletedRecords, aiConfig, isAiThinking,
     replayMoves, replayIndex, replayBoard, isReplayPlaying, replaySpeed,
     currentMoveCount, isGameOver,
     startGame, placeStone, aiMove, saveRecord,
     startReplay, replayStepForward, replayStepBack, replayGoToStart, replayGoToEnd,
     toggleReplayPlay, setReplaySpeed, stopReplay, checkWin,
+    softDeleteRecord, restoreRecord, permanentDeleteRecord, clearDeletedRecords,
   };
 });

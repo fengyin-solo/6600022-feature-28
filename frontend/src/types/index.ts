@@ -15,6 +15,10 @@ export interface GameRecord {
   duration: number;
 }
 
+export interface DeletedRecord extends GameRecord {
+  deletedAt: string;
+}
+
 export interface AIConfig {
   depth: number;
   enabled: boolean;
